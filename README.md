@@ -1,2 +1,0 @@
-# Dezolver
-Lab Automation
