@@ -13,23 +13,41 @@ export class PaymentController {
   }
 
   /**
+   * Shared 503 response for when Razorpay credentials are not configured.
+   * Returned by every payment endpoint so callers get a clear message
+   * instead of a cryptic 500 / unhandled exception.
+   */
+  private rejectUnconfigured(res: Response): void {
+    res.status(503).json({
+      success: false,
+      message:
+        'Payment service is not available. ' +
+        'RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET have not been configured on this server.'
+    });
+  }
+
+  /**
    * Get Razorpay configuration (key) for frontend
    */
   getConfig = async (req: Request, res: Response): Promise<void> => {
+    if (!this.razorpayService.isConfigured()) {
+      this.rejectUnconfigured(res);
+      return;
+    }
     try {
       const key = this.razorpayService.getRazorpayKey();
 
       res.status(200).json({
         success: true,
         data: {
-          key_id: key,
-        },
+          key_id: key
+        }
       });
     } catch (error) {
       console.error('Get config error:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to retrieve payment configuration',
+        message: 'Failed to retrieve payment configuration'
       });
     }
   };
@@ -38,6 +56,10 @@ export class PaymentController {
    * Create payment order for subscription
    */
   createSubscriptionOrder = async (req: Request, res: Response): Promise<void> => {
+    if (!this.razorpayService.isConfigured()) {
+      this.rejectUnconfigured(res);
+      return;
+    }
     try {
       const { subscription_id } = req.body;
       const currentUser = (req as any).user;
@@ -45,7 +67,7 @@ export class PaymentController {
       if (!subscription_id) {
         res.status(400).json({
           success: false,
-          message: 'Subscription ID is required',
+          message: 'Subscription ID is required'
         });
         return;
       }
@@ -54,13 +76,13 @@ export class PaymentController {
       const subscriptionRepo = AppDataSource.getRepository(Subscription);
       const subscription = await subscriptionRepo.findOne({
         where: { id: subscription_id },
-        relations: ['organization'],
+        relations: ['organization']
       });
 
       if (!subscription) {
         res.status(404).json({
           success: false,
-          message: 'Subscription not found',
+          message: 'Subscription not found'
         });
         return;
       }
@@ -72,7 +94,7 @@ export class PaymentController {
       ) {
         res.status(403).json({
           success: false,
-          message: 'Access denied',
+          message: 'Access denied'
         });
         return;
       }
@@ -83,7 +105,7 @@ export class PaymentController {
         organization_id: subscription.organization_id,
         plan_name: subscription.plan,
         amount: Number(subscription.total_amount),
-        billing_cycle: subscription.billing_cycle,
+        billing_cycle: subscription.billing_cycle
       });
 
       res.status(201).json({
@@ -94,14 +116,14 @@ export class PaymentController {
           amount: order.amount,
           currency: order.currency,
           key_id: this.razorpayService.getRazorpayKey(),
-          payment_id: payment.id,
-        },
+          payment_id: payment.id
+        }
       });
     } catch (error) {
       console.error('Create subscription order error:', error);
       res.status(500).json({
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to create payment order',
+        message: error instanceof Error ? error.message : 'Failed to create payment order'
       });
     }
   };
@@ -110,6 +132,10 @@ export class PaymentController {
    * Create custom payment order
    */
   createOrder = async (req: Request, res: Response): Promise<void> => {
+    if (!this.razorpayService.isConfigured()) {
+      this.rejectUnconfigured(res);
+      return;
+    }
     try {
       const { amount, description, metadata } = req.body;
       const currentUser = (req as any).user;
@@ -117,7 +143,7 @@ export class PaymentController {
       if (!amount || amount <= 0) {
         res.status(400).json({
           success: false,
-          message: 'Valid amount is required',
+          message: 'Valid amount is required'
         });
         return;
       }
@@ -125,7 +151,7 @@ export class PaymentController {
       if (!currentUser.organization_id) {
         res.status(400).json({
           success: false,
-          message: 'Organization ID is required',
+          message: 'Organization ID is required'
         });
         return;
       }
@@ -135,7 +161,7 @@ export class PaymentController {
         amount,
         currency: 'INR',
         receipt: `order_${currentUser.organization_id}_${Date.now()}`,
-        notes: metadata || {},
+        notes: metadata || {}
       });
 
       // Create payment record
@@ -147,7 +173,7 @@ export class PaymentController {
         status: PaymentStatus.PENDING,
         payment_method: 'razorpay' as any,
         description: description || 'Payment for services',
-        metadata,
+        metadata
       });
 
       res.status(201).json({
@@ -158,14 +184,14 @@ export class PaymentController {
           amount: order.amount,
           currency: order.currency,
           key_id: this.razorpayService.getRazorpayKey(),
-          payment_id: payment.id,
-        },
+          payment_id: payment.id
+        }
       });
     } catch (error) {
       console.error('Create order error:', error);
       res.status(500).json({
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to create payment order',
+        message: error instanceof Error ? error.message : 'Failed to create payment order'
       });
     }
   };
@@ -174,6 +200,10 @@ export class PaymentController {
    * Verify payment after successful payment on frontend
    */
   verifyPayment = async (req: Request, res: Response): Promise<void> => {
+    if (!this.razorpayService.isConfigured()) {
+      this.rejectUnconfigured(res);
+      return;
+    }
     try {
       const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
       const currentUser = (req as any).user;
@@ -181,7 +211,7 @@ export class PaymentController {
       if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
         res.status(400).json({
           success: false,
-          message: 'Missing payment verification parameters',
+          message: 'Missing payment verification parameters'
         });
         return;
       }
@@ -190,13 +220,13 @@ export class PaymentController {
       const isValid = this.razorpayService.verifyPaymentSignature({
         razorpay_order_id,
         razorpay_payment_id,
-        razorpay_signature,
+        razorpay_signature
       });
 
       if (!isValid) {
         res.status(400).json({
           success: false,
-          message: 'Invalid payment signature',
+          message: 'Invalid payment signature'
         });
         return;
       }
@@ -211,14 +241,14 @@ export class PaymentController {
         PaymentStatus.COMPLETED,
         {
           razorpay_signature,
-          payment_details: paymentDetails,
+          payment_details: paymentDetails
         }
       );
 
       if (!payment) {
         res.status(404).json({
           success: false,
-          message: 'Payment record not found',
+          message: 'Payment record not found'
         });
         return;
       }
@@ -228,7 +258,7 @@ export class PaymentController {
         await this.razorpayService.updateSubscriptionPaymentInfo(payment.subscription_id, {
           payment_method_id: paymentDetails.method,
           transaction_id: razorpay_payment_id,
-          amount: Number(payment.amount),
+          amount: Number(payment.amount)
         });
       }
 
@@ -239,14 +269,14 @@ export class PaymentController {
           payment_id: payment.id,
           transaction_id: razorpay_payment_id,
           amount: payment.amount,
-          status: payment.status,
-        },
+          status: payment.status
+        }
       });
     } catch (error) {
       console.error('Verify payment error:', error);
       res.status(500).json({
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to verify payment',
+        message: error instanceof Error ? error.message : 'Failed to verify payment'
       });
     }
   };
@@ -262,13 +292,13 @@ export class PaymentController {
       const paymentRepo = AppDataSource.getRepository(Payment);
       const payment = await paymentRepo.findOne({
         where: { id: paymentId },
-        relations: ['organization', 'subscription'],
+        relations: ['organization', 'subscription']
       });
 
       if (!payment) {
         res.status(404).json({
           success: false,
-          message: 'Payment not found',
+          message: 'Payment not found'
         });
         return;
       }
@@ -280,20 +310,20 @@ export class PaymentController {
       ) {
         res.status(403).json({
           success: false,
-          message: 'Access denied',
+          message: 'Access denied'
         });
         return;
       }
 
       res.status(200).json({
         success: true,
-        data: payment,
+        data: payment
       });
     } catch (error) {
       console.error('Get payment error:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to retrieve payment',
+        message: 'Failed to retrieve payment'
       });
     }
   };
@@ -310,7 +340,7 @@ export class PaymentController {
       if (currentUser.organization_id !== organizationId && currentUser.tier !== 'platform') {
         res.status(403).json({
           success: false,
-          message: 'Access denied',
+          message: 'Access denied'
         });
         return;
       }
@@ -318,18 +348,18 @@ export class PaymentController {
       const paymentRepo = AppDataSource.getRepository(Payment);
       const payments = await paymentRepo.find({
         where: { organization_id: organizationId },
-        order: { created_at: 'DESC' },
+        order: { created_at: 'DESC' }
       });
 
       res.status(200).json({
         success: true,
-        data: payments,
+        data: payments
       });
     } catch (error) {
       console.error('Get organization payments error:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to retrieve payments',
+        message: 'Failed to retrieve payments'
       });
     }
   };
@@ -338,6 +368,10 @@ export class PaymentController {
    * Handle Razorpay webhook
    */
   handleWebhook = async (req: Request, res: Response): Promise<void> => {
+    if (!this.razorpayService.isConfigured()) {
+      this.rejectUnconfigured(res);
+      return;
+    }
     try {
       const webhookBody = JSON.stringify(req.body);
       const signature = req.headers['x-razorpay-signature'] as string;
@@ -345,7 +379,7 @@ export class PaymentController {
       if (!signature) {
         res.status(400).json({
           success: false,
-          message: 'Missing webhook signature',
+          message: 'Missing webhook signature'
         });
         return;
       }
@@ -356,7 +390,7 @@ export class PaymentController {
       if (!isValid) {
         res.status(400).json({
           success: false,
-          message: 'Invalid webhook signature',
+          message: 'Invalid webhook signature'
         });
         return;
       }
@@ -394,13 +428,13 @@ export class PaymentController {
 
       res.status(200).json({
         success: true,
-        message: 'Webhook processed successfully',
+        message: 'Webhook processed successfully'
       });
     } catch (error) {
       console.error('Webhook handler error:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to process webhook',
+        message: 'Failed to process webhook'
       });
     }
   };
@@ -420,7 +454,7 @@ export class PaymentController {
       PaymentStatus.COMPLETED,
       {
         captured: true,
-        payment_method: payment.method,
+        payment_method: payment.method
       }
     );
   }
@@ -434,7 +468,7 @@ export class PaymentController {
       PaymentStatus.FAILED,
       {
         error_code: payment.error_code,
-        error_description: payment.error_description,
+        error_description: payment.error_description
       }
     );
   }
@@ -449,7 +483,7 @@ export class PaymentController {
 
     const paymentRepo = AppDataSource.getRepository(Payment);
     const payment = await paymentRepo.findOne({
-      where: { payment_gateway_payment_id: refund.payment_id },
+      where: { payment_gateway_payment_id: refund.payment_id }
     });
 
     if (payment) {
@@ -458,7 +492,7 @@ export class PaymentController {
         ...payment.metadata,
         refund_id: refund.id,
         refund_amount: refund.amount / 100,
-        refund_date: new Date().toISOString(),
+        refund_date: new Date().toISOString()
       };
       await paymentRepo.save(payment);
     }

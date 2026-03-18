@@ -17,7 +17,8 @@ const buildAllowedOrigins = (): string[] => {
     return process.env.FRONTEND_URL.split(',').map((url) => url.trim().replace(/\/$/, '')); // trim whitespace + trailing slash
   }
 
-  // Development fallback — covers Vite default ports and common variants
+  // Development fallback — covers Vite default ports, common variants,
+  // and remote dev/staging IPs (e.g. team VPS or cloud preview server)
   return [
     'http://localhost:5173',
     'http://localhost:5174',
@@ -25,7 +26,9 @@ const buildAllowedOrigins = (): string[] => {
     'http://localhost:3001',
     'http://localhost:3002',
     'http://127.0.0.1:5173',
-    'http://127.0.0.1:3000'
+    'http://127.0.0.1:3000',
+    // Remote dev server — add any team/staging IPs here
+    'http://143.244.137.101:3002'
   ];
 };
 

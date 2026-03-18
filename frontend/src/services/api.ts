@@ -15,6 +15,10 @@ class ApiService {
     this.api = axios.create({
       baseURL: config.api.baseUrl,
       timeout: config.api.timeout,
+      // withCredentials must be true so the browser sends cookies and the
+      // Authorization header cross-origin. This pairs with the backend's
+      // CORS setting: credentials: true + explicit origin whitelist.
+      withCredentials: true,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -242,33 +246,33 @@ export const certificatesAPI = {
   // Certificate Generation
   generate: (data: any) => apiService.post('/certificates/generate', data),
   batchGenerate: (data: any) => apiService.post('/certificates/batch-generate', data),
-  
+
   // Certificate Retrieval
   getMyCertificates: () => apiService.get('/certificates/my'),
   getUserCertificates: (userId: string) => apiService.get(`/certificates/user/${userId}`),
   downloadCertificate: (certificateId: string) => apiService.get(`/certificates/download/${certificateId}`),
-  
+
   // Certificate Verification
   verifyCertificate: (certificateId: string) => apiService.get(`/certificates/verify/${certificateId}`),
-  
+
   // Certificate Management (Admin)
-  revokeCertificate: (certificateId: string, reason: string) => 
+  revokeCertificate: (certificateId: string, reason: string) =>
     apiService.patch(`/certificates/${certificateId}/revoke`, { reason }),
-  reissueCertificate: (certificateId: string) => 
+  reissueCertificate: (certificateId: string) =>
     apiService.post(`/certificates/${certificateId}/reissue`),
   searchCertificates: (params: any) => apiService.get('/certificates/search', { params }),
-  
+
   // Template Management
   getTemplates: (params?: any) => apiService.get('/certificates/templates', { params }),
   createTemplate: (data: any) => apiService.post('/certificates/templates', data),
   getTemplate: (templateId: string) => apiService.get(`/certificates/templates/${templateId}`),
-  updateTemplate: (templateId: string, data: any) => 
+  updateTemplate: (templateId: string, data: any) =>
     apiService.patch(`/certificates/templates/${templateId}`, data),
-  setDefaultTemplate: (templateId: string) => 
+  setDefaultTemplate: (templateId: string) =>
     apiService.patch(`/certificates/templates/${templateId}/set-default`),
-  
+
   // Upload template assets
-  uploadTemplateAssets: (formData: FormData) => 
+  uploadTemplateAssets: (formData: FormData) =>
     apiService.post('/certificates/templates/upload-assets', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }),
@@ -283,28 +287,28 @@ export const employeeAPI = {
   getByUserId: (userId: string) => apiService.get(`/employees/user/${userId}`),
   getMyRecord: () => apiService.get('/employees/me'),
   update: (employeeId: string, data: any) => apiService.patch(`/employees/${employeeId}`, data),
-  
+
   // Employee Management
-  terminate: (employeeId: string, data: any) => 
+  terminate: (employeeId: string, data: any) =>
     apiService.patch(`/employees/${employeeId}/terminate`, data),
-  reactivate: (employeeId: string) => 
+  reactivate: (employeeId: string) =>
     apiService.patch(`/employees/${employeeId}/reactivate`),
-  
+
   // Organization Structure
   getDepartments: () => apiService.get('/employees/departments'),
   getManagers: () => apiService.get('/employees/managers'),
   getDirectReports: (employeeId: string) => apiService.get(`/employees/${employeeId}/reports`),
   getMyDirectReports: () => apiService.get('/employees/me/reports'),
-  
+
   // Compensation
-  calculateCompensation: (employeeId: string) => 
+  calculateCompensation: (employeeId: string) =>
     apiService.get(`/employees/${employeeId}/compensation`),
-  
+
   // Search
   search: (params: any) => apiService.get('/employees/search', { params }),
 
   // Bank Details
-  verifyBankDetails: (employeeId: string) => 
+  verifyBankDetails: (employeeId: string) =>
     apiService.patch(`/employees/${employeeId}/bank-details/verify`),
 }
 
@@ -315,7 +319,7 @@ export const companyBankAPI = {
   getAll: (params?: any) => apiService.get('/company-bank', { params }),
   getPrimary: () => apiService.get('/company-bank/primary'),
   update: (bankId: string, data: any) => apiService.patch(`/company-bank/${bankId}`, data),
-  
+
   // Bank Management
   setPrimary: (bankId: string) => apiService.patch(`/company-bank/${bankId}/set-primary`),
   verify: (bankId: string) => apiService.patch(`/company-bank/${bankId}/verify`),
@@ -327,25 +331,25 @@ export const payrollAPI = {
   // Payroll Calculation
   calculate: (data: any) => apiService.post('/payroll/calculate', data),
   batchCalculate: (data: any) => apiService.post('/payroll/batch-calculate', data),
-  
+
   // Payroll Processing
   process: (payrollId: string) => apiService.patch(`/payroll/${payrollId}/process`),
-  markAsPaid: (payrollId: string, data: any) => 
+  markAsPaid: (payrollId: string, data: any) =>
     apiService.patch(`/payroll/${payrollId}/mark-paid`, data),
-  
+
   // Payroll Retrieval
-  getEmployeePayrolls: (employeeId: string, params?: any) => 
+  getEmployeePayrolls: (employeeId: string, params?: any) =>
     apiService.get(`/payroll/employee/${employeeId}`, { params }),
   getMyPayrolls: (params?: any) => apiService.get('/payroll/my', { params }),
-  
+
   // Salary Slips
-  generateSalarySlip: (payrollId: string) => 
+  generateSalarySlip: (payrollId: string) =>
     apiService.post(`/payroll/${payrollId}/salary-slip/generate`),
-  batchGenerateSalarySlips: (data: any) => 
+  batchGenerateSalarySlips: (data: any) =>
     apiService.post('/payroll/salary-slips/batch-generate', data),
-  downloadSalarySlip: (payrollId: string) => 
+  downloadSalarySlip: (payrollId: string) =>
     apiService.get(`/payroll/${payrollId}/salary-slip/download`),
-  
+
   // Reports
   getSummary: (params: any) => apiService.get('/payroll/summary', { params }),
 }
@@ -356,18 +360,18 @@ export const organizationAPI = {
   create: (data: any) => apiService.post('/organizations', data),
   getMy: () => apiService.get('/organizations/my'),
   getById: (id: string) => apiService.get(`/organizations/${id}`),
-  
+
   // User Management
   getUsers: (orgId: string) => apiService.get(`/organizations/${orgId}/users`),
   addUser: (orgId: string, userData: any) => apiService.post(`/organizations/${orgId}/users`, userData),
-  
+
   // Subscription Management
   upgradePlan: (orgId: string, data: any) => apiService.post(`/organizations/${orgId}/upgrade`, data),
-  
+
   // Permissions and Limits
   getUserPermissions: () => apiService.get('/organizations/permissions'),
   checkUserLimits: () => apiService.get('/organizations/user-limits'),
-  
+
   // Platform Admin only
   getPlatformStats: () => apiService.get('/organizations/platform/stats'),
 }
