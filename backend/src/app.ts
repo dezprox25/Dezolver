@@ -41,21 +41,9 @@ validateEnvironment();
 
 const app: Application = express();
 
-// ── CORS ─────────────────────────────────────────────────────────────────────
-// Must be registered BEFORE helmet() so that CORS headers are written on the
-// response even when helmet would otherwise short-circuit the request.
-//
-// Step 1 — handle every OPTIONS preflight immediately and return 204.
-//           This must be the very first route/middleware so that preflight
-//           requests never reach rate-limiters, auth guards, or other
-//           middleware that would reject them.
-app.options('*', cors(corsOptions));
-
-// Step 2 — attach CORS headers to every non-preflight request as well.
-app.use(cors(corsOptions));
-
-// ── Security headers (after CORS so headers are not overwritten) ──────────────
+// Security middleware
 app.use(helmet());
+app.use(cors(corsOptions));
 app.use(compression());
 
 // Body parsing middleware

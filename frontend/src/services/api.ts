@@ -68,10 +68,9 @@ class ApiService {
 
           if (refreshToken) {
             try {
-              const response = await axios.post(
-                `${config.api.baseUrl}/auth/refresh-token`,
-                { refreshToken }
-              )
+              const response = await axios.post(`${config.api.baseUrl}/auth/refresh-token`, {
+                refreshToken,
+              })
 
               if (response.data.success && response.data.data.token) {
                 const newToken = response.data.data.token
@@ -156,10 +155,26 @@ export const apiService = new ApiService()
 
 // Specific API endpoints
 export const authAPI = {
-  login: (data: { username: string; password: string }) =>
-    apiService.post('/auth/login', data),
-  register: (data: { username: string; email: string; password: string; fullName: string; phoneNumber?: string }) =>
-    apiService.post('/auth/register', data),
+  login: (data: { username: string; password: string }) => apiService.post('/auth/login', data),
+
+  // Accepts both the legacy shape { username, fullName, phoneNumber }
+  // and the RegisterPage shape { studentName, collegeName, registerNumber, mobileNumber, officialEmail }.
+  // The backend controller accepts all of these and auto-generates username when absent.
+  register: (data: {
+    email: string
+    password: string
+    // New RegisterPage fields
+    studentName?: string
+    collegeName?: string
+    registerNumber?: string
+    mobileNumber?: string
+    officialEmail?: string
+    // Legacy / direct-API fields (kept for backward compatibility)
+    username?: string
+    fullName?: string
+    phoneNumber?: string
+  }) => apiService.post('/auth/register', data),
+
   logout: () => apiService.post('/auth/logout'),
   me: () => apiService.get('/auth/profile'),
   refreshToken: () => apiService.post('/auth/refresh-token'),
@@ -174,8 +189,7 @@ export const problemsAPI = {
   getRecommendations: () => apiService.get('/problems/recommendations'),
   submit: (problemId: string, data: { code: string; language: string }) =>
     apiService.post(`/problems/${problemId}/submit`, data),
-  getSubmissions: (problemId: string) =>
-    apiService.get(`/problems/${problemId}/submissions`),
+  getSubmissions: (problemId: string) => apiService.get(`/problems/${problemId}/submissions`),
 }
 
 export const contestsAPI = {
@@ -188,8 +202,10 @@ export const contestsAPI = {
   unregister: (id: string) => apiService.delete(`/contests/${id}/register`),
   getLeaderboard: (id: string) => apiService.get(`/contests/${id}/leaderboard`),
   getProblems: (id: string) => apiService.get(`/contests/${id}/problems`),
-  addProblem: (id: string, problemId: string) => apiService.post(`/contests/${id}/problems`, { problemId }),
-  removeProblem: (id: string, problemId: string) => apiService.delete(`/contests/${id}/problems/${problemId}`),
+  addProblem: (id: string, problemId: string) =>
+    apiService.post(`/contests/${id}/problems`, { problemId }),
+  removeProblem: (id: string, problemId: string) =>
+    apiService.delete(`/contests/${id}/problems/${problemId}`),
 }
 
 export const userAPI = {
@@ -219,9 +235,12 @@ export const groupsAPI = {
   join: (inviteCode: string) => apiService.post(`/groups/join/${inviteCode}`),
   leave: (id: string) => apiService.post(`/groups/${id}/leave`),
   getMembers: (id: string) => apiService.get(`/groups/${id}/members`),
-  removeMember: (id: string, userId: string) => apiService.delete(`/groups/${id}/members/${userId}`),
-  promoteMember: (id: string, userId: string) => apiService.post(`/groups/${id}/members/${userId}/promote`),
-  demoteMember: (id: string, userId: string) => apiService.post(`/groups/${id}/members/${userId}/demote`),
+  removeMember: (id: string, userId: string) =>
+    apiService.delete(`/groups/${id}/members/${userId}`),
+  promoteMember: (id: string, userId: string) =>
+    apiService.post(`/groups/${id}/members/${userId}/promote`),
+  demoteMember: (id: string, userId: string) =>
+    apiService.post(`/groups/${id}/members/${userId}/demote`),
   createContest: (id: string, data: any) => apiService.post(`/groups/${id}/contests`, data),
 }
 
@@ -236,7 +255,8 @@ export const adminAPI = {
   deleteUser: (userId: string) => apiService.delete(`/admin/users/${userId}`),
   promoteUser: (userId: string) => apiService.put(`/admin/users/${userId}/promote`),
   promoteUserByUsername: (username: string) => apiService.put(`/admin/users/${username}/promote`),
-  updateUserRole: (userId: string, role: string) => apiService.put(`/admin/users/${userId}/role`, { role }),
+  updateUserRole: (userId: string, role: string) =>
+    apiService.put(`/admin/users/${userId}/role`, { role }),
   getSystemStats: () => apiService.get('/admin/stats'),
   clearData: () => apiService.post('/admin/clear-data'),
 }
@@ -250,10 +270,12 @@ export const certificatesAPI = {
   // Certificate Retrieval
   getMyCertificates: () => apiService.get('/certificates/my'),
   getUserCertificates: (userId: string) => apiService.get(`/certificates/user/${userId}`),
-  downloadCertificate: (certificateId: string) => apiService.get(`/certificates/download/${certificateId}`),
+  downloadCertificate: (certificateId: string) =>
+    apiService.get(`/certificates/download/${certificateId}`),
 
   // Certificate Verification
-  verifyCertificate: (certificateId: string) => apiService.get(`/certificates/verify/${certificateId}`),
+  verifyCertificate: (certificateId: string) =>
+    apiService.get(`/certificates/verify/${certificateId}`),
 
   // Certificate Management (Admin)
   revokeCertificate: (certificateId: string, reason: string) =>
@@ -274,7 +296,7 @@ export const certificatesAPI = {
   // Upload template assets
   uploadTemplateAssets: (formData: FormData) =>
     apiService.post('/certificates/templates/upload-assets', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
     }),
 }
 
@@ -291,8 +313,7 @@ export const employeeAPI = {
   // Employee Management
   terminate: (employeeId: string, data: any) =>
     apiService.patch(`/employees/${employeeId}/terminate`, data),
-  reactivate: (employeeId: string) =>
-    apiService.patch(`/employees/${employeeId}/reactivate`),
+  reactivate: (employeeId: string) => apiService.patch(`/employees/${employeeId}/reactivate`),
 
   // Organization Structure
   getDepartments: () => apiService.get('/employees/departments'),
@@ -363,10 +384,12 @@ export const organizationAPI = {
 
   // User Management
   getUsers: (orgId: string) => apiService.get(`/organizations/${orgId}/users`),
-  addUser: (orgId: string, userData: any) => apiService.post(`/organizations/${orgId}/users`, userData),
+  addUser: (orgId: string, userData: any) =>
+    apiService.post(`/organizations/${orgId}/users`, userData),
 
   // Subscription Management
-  upgradePlan: (orgId: string, data: any) => apiService.post(`/organizations/${orgId}/upgrade`, data),
+  upgradePlan: (orgId: string, data: any) =>
+    apiService.post(`/organizations/${orgId}/upgrade`, data),
 
   // Permissions and Limits
   getUserPermissions: () => apiService.get('/organizations/permissions'),

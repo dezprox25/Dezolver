@@ -69,18 +69,37 @@ export default defineConfig({
   },
   server: {
     port: 3002,
+    // Bind to all network interfaces so the dev server is reachable via
+    // the machine's public IP (e.g. http://143.244.137.101:3002).
+    // Equivalent to passing --host on the CLI — now the default.
+    host: true,
+    // Fail fast if port 3002 is already taken instead of silently picking
+    // a different port (which would break the CORS origin whitelist).
+    strictPort: true,
+    // Allow cross-origin requests to the Vite dev server itself
+    // (needed when the browser is on a different machine / IP).
+    cors: true,
     proxy: {
+      // Forwards /api/* → backend at port 3001.
+      // Used as a fallback when VITE_API_URL is not set or is relative.
+      // When VITE_API_URL=http://143.244.137.101:3001/api Axios bypasses
+      // this proxy and calls the backend directly — both paths work.
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
       },
       '/ws': {
-        target: 'ws://localhost:3000',
+        target: 'ws://localhost:3001',
         ws: true,
       },
     },
     hmr: {
+      // When running on a remote server the HMR websocket must connect
+      // to the public IP, not localhost.
+      host: '143.244.137.101',
+      port: 3002,
+      protocol: 'ws',
       overlay: false,
     },
   },

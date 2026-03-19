@@ -78,10 +78,10 @@ Once the server is running, API documentation is available at:
 backend/
 ├── src/
 │   ├── config/         # Configuration files
-│   ├── controllers/    # Routes controllers
+│   ├── controllers/    # Route controllers
 │   ├── middleware/     # Express middleware
 │   ├── models/         # Database models
-│   ├── routes/         # APIs routes
+│   ├── routes/         # API routes
 │   ├── services/       # Business logic
 │   ├── utils/          # Utility functions
 │   ├── app.ts          # Express app setup
